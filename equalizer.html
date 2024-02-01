@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Visualization</title>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #grid-container {
+            display: grid;
+            grid-template-columns: repeat(20, 20px);
+            grid-gap: 2px;
+        }
+
+        .grid-cell {
+            width: 20px;
+            height: 20px;
+            background-color: #eee;
+        }
+
+        input[type="file"] {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="grid-container"></div>
+    <input type="file" accept="audio/*" onchange="handleFileSelect(event)">
+    <audio id="audioPlayer" controls></audio>
+
+    <script>
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            
+            if (file) {
+                const audioPlayer = document.getElementById('audioPlayer');
+                audioPlayer.src = URL.createObjectURL(file);
+
+                visualizeAudio(file);
+            }
+        }
+
+        function visualizeAudio(audioFile) {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const audioSource = audioContext.createMediaElementSource(document.getElementById('audioPlayer'));
+
+            audioSource.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            const gridContainer = document.getElementById('grid-container');
+            gridContainer.innerHTML = '';
+
+            for (let i = 0; i < bufferLength; i++) {
+                const gridCell = document.createElement('div');
+                gridCell.classList.add('grid-cell');
+                gridContainer.appendChild(gridCell);
+            }
+
+            const gridCells = document.querySelectorAll('.grid-cell');
+
+            function draw() {
+                analyser.getByteFrequencyData(dataArray);
+
+                gridCells.forEach((cell, index) => {
+                    const value = dataArray[index];
+                    const color = `rgb(0, ${value}, 0)`;
+                    cell.style.backgroundColor = color;
+                });
+
+                requestAnimationFrame(draw);
+            }
+
+            draw();
+        }
+    </script>
+</body>
+</html>
